@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>2048 - wangyiying</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <style>
+        /* 手绘水彩风格 - 淡粉色背景 */
+        body {
+            /* 字体已替换为鸿蒙字体 */
+            font-family: 'HarmonyOS Sans SC', sans-serif; 
+            background-color: #FFEBEE; /* 淡粉色背景 */
+            color: #6D635B; /* 柔和的棕色文字 */
+            touch-action: none;
+        }
+
+        /* 游戏容器 */
+        #game-container {
+            width: 100%;
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 16px;
+        }
+
+        /* 游戏面板 */
+        #game-board {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(4, 1fr);
+            gap: 12px;
+            background-color: #E3F2FD; /* 淡蓝色调 */
+            border: 8px solid #E3F2FD; 
+            border-radius: 12px; /* 更圆润的边角 */
+            padding: 12px;
+            position: relative;
+        }
+
+        /* 方块的占位背景 */
+        .grid-cell {
+            background-color: #BBDEFB; /* 稍深的淡蓝色 */
+            border-radius: 8px;
+            width: 100%;
+            padding-bottom: 100%; 
+        }
+
+        /* 数字方块的样式 */
+        .tile {
+            position: absolute;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: 700; /* 字体加粗 */
+            border-radius: 8px; /* 圆润边角 */
+            transition: transform 0.15s ease-in-out, top 0.15s ease-in-out, left 0.15s ease-in-out, background-color 0.15s;
+            line-height: 1;
+            word-break: break-all;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05); /* 细微的阴影，增加层次感 */
+        }
+
+        /* 字体大小自适应 */
+        .tile[data-value="w"], .tile[data-value="wa"] { font-size: 3.5em; }
+        .tile[data-value="wan"], .tile[data-value="wang"] { font-size: 2.8em; }
+        .tile[data-value="wangy"] { font-size: 2.5em; }
+        .tile[data-value="wangyi"] { font-size: 2.2em; }
+        .tile[data-value="wangyiy"] { font-size: 2em; }
+        .tile[data-value="wangyiyi"] { font-size: 1.7em; }
+        .tile[data-value="wangyiyin"] { font-size: 1.5em; }
+        .tile[data-value="wangyiying"] { font-size: 1.3em; }
+        .tile[data-value="★"] { font-size: 3em; }
+        
+        /* 针对小屏幕调整字体 */
+        @media (max-width: 420px) {
+            .tile[data-value="w"], .tile[data-value="wa"] { font-size: 2.8em; }
+            .tile[data-value="wan"], .tile[data-value="wang"] { font-size: 2.2em; }
+            .tile[data-value="wangy"] { font-size: 2em; }
+            .tile[data-value="wangyi"] { font-size: 1.8em; }
+            .tile[data-value="wangyiy"] { font-size: 1.6em; }
+            .tile[data-value="wangyiyi"] { font-size: 1.4em; }
+            .tile[data-value="wangyiyin"] { font-size: 1.2em; }
+            .tile[data-value="wangyiying"] { font-size: 1em; }
+            .tile[data-value="★"] { font-size: 2.5em; }
+        }
+        
+        /* 头部和按钮样式 */
+        header h1 {
+            font-size: 3.5rem;
+            font-weight: 700;
+        }
+        .score-box {
+            background-color: #E3F2FD; /* 淡蓝色调 */
+            color: #6D635B;
+            padding: 8px 16px;
+            border-radius: 8px;
+        }
+        .score-box .label {
+             font-size: 0.9rem;
+             font-weight: 400;
+        }
+         .score-box .score-value {
+             font-size: 1.5rem;
+             font-weight: 700;
+        }
+        #new-game-button {
+            background-color: #90CAF9; /* 柔和的蓝色按钮 */
+            color: white;
+            font-weight: 700;
+            padding: 12px 16px;
+            border-radius: 8px;
+            transition: background-color 0.2s;
+        }
+        #new-game-button:hover {
+            background-color: #64B5F6;
+        }
+
+
+        /* 游戏结束/胜利的遮罩层 */
+        #game-over-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 235, 238, 0.9); /* 基于粉色的遮罩 */
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            z-index: 100;
+            border-radius: 12px;
+        }
+        #game-over-message {
+            font-size: 3.5rem;
+            font-weight: 700;
+            color: #1E88E5;
+        }
+        #retry-button {
+            background-color: #90CAF9; /* 柔和的蓝色按钮 */
+            color: white;
+            font-weight: 700;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 1.5rem;
+            margin-top: 1rem;
+        }
+        #retry-button:hover {
+            background-color: #64B5F6;
+        }
+
+        /* 底部提示文字 */
+        footer {
+            /* 字体已从body继承 */
+        }
+
+        /* 动画效果 */
+        .tile-new {
+            animation: appear 0.2s ease-in-out;
+        }
+        .tile-merged {
+            animation: pop 0.2s ease-in-out;
+        }
+
+        @keyframes appear {
+            from {
+                transform: scale(0.5);
+                opacity: 0.5;
+            }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+        @keyframes pop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.15); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-2 sm:p-4">
+
+    <div id="game-container">
+        <header class="flex items-center justify-between mb-4">
+            <h1>WANGYIYING</h1>
+            <div class="flex items-center space-x-2">
+                <div class="score-box text-center">
+                    <div class="label">SCORE</div>
+                    <div id="score" class="score-value">0</div>
+                </div>
+                <button id="new-game-button">New Game</button>
+            </div>
+        </header>
+
+        <main id="game-board-container" class="relative">
+            <div id="game-board">
+                </div>
+            <div id="game-over-overlay" style="display: none;">
+                <h2 id="game-over-message">Game Over!</h2>
+                <button id="retry-button">Try Again</button>
+            </div>
+        </main>
+        
+        <footer class="mt-4 text-center text-lg space-y-1">
+            <p>合成大星星！使用方向键或者滑动方块儿叭~</p>
+            <p>Используйте <strong>клавиши со стрелками</strong> или <strong>проведите пальцем</strong> для игры. Доберитесь до плитки <strong>★</strong>!</p>
+            <p>Use <strong>arrow keys</strong> or <strong>swipe</strong> to play. Get to the <strong>★</strong> tile!</p>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const boardElement = document.getElementById('game-board');
+            const scoreElement = document.getElementById('score');
+            const newGameButton = document.getElementById('new-game-button');
+            const retryButton = document.getElementById('retry-button');
+            const gameOverOverlay = document.getElementById('game-over-overlay');
+            const gameOverMessage = document.getElementById('game-over-message');
+
+            const GRID_SIZE = 4;
+            let board = [];
+            let score = 0;
+            let isGameOver = false;
+
+            // 定义数值与文字和颜色的映射关系 (淡蓝色调)
+            const TILE_MAP = {
+                2:    { text: 'w',           bgColor: '#E3F2FD', color: '#1565C0' }, // 天蓝
+                4:    { text: 'wa',          bgColor: '#B3E5FC', color: '#039BE5' }, // 亮蓝
+                8:    { text: 'wan',         bgColor: '#81D4FA', color: '#FFFFFF' }, // 浅天蓝
+                16:   { text: 'wang',        bgColor: '#4FC3F7', color: '#FFFFFF' }, // 
+                32:   { text: 'wangy',       bgColor: '#E0F7FA', color: '#00838F' }, // 浅青
+                64:   { text: 'wangyi',      bgColor: '#B2EBF2', color: '#00838F' }, // 
+                128:  { text: 'wangyiy',     bgColor: '#80DEEA', color: '#FFFFFF' }, // 青色
+                256:  { text: 'wangyiyi',    bgColor: '#4DD0E1', color: '#FFFFFF' }, // 
+                512:  { text: 'wangyiyin',   bgColor: '#E8EAF6', color: '#303F9F' }, // 靛蓝
+                1024: { text: 'wangyiying',  bgColor: '#C5CAE9', color: '#FFFFFF' }, // 
+                2048: { text: '★',           bgColor: '#FBC02D', color: '#FFFFFF' }, // 闪亮金
+                4096: { text: '★',           bgColor: '#FFA000', color: '#FFFFFF' }  // 琥珀金
+            };
+
+            // 初始化游戏
+            function startGame() {
+                board = Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(0));
+                score = 0;
+                isGameOver = false;
+                updateScore(0);
+                gameOverOverlay.style.display = 'none';
+                document.body.removeAttribute('data-won');
+                
+                boardElement.innerHTML = '';
+                for (let i = 0; i < GRID_SIZE * GRID_SIZE; i++) {
+                    const cell = document.createElement('div');
+                    cell.classList.add('grid-cell');
+                    boardElement.appendChild(cell);
+                }
+                
+                addRandomTile();
+                addRandomTile();
+                drawBoard();
+            }
+
+            // 绘制整个棋盘
+            function drawBoard() {
+                const existingTiles = document.querySelectorAll('.tile');
+                existingTiles.forEach(tile => tile.remove());
+
+                const boardSize = boardElement.offsetWidth;
+                const gap = 12;
+                const cellSize = (boardSize - gap * (GRID_SIZE + 1)) / GRID_SIZE;
+                
+                for (let r = 0; r < GRID_SIZE; r++) {
+                    for (let c = 0; c < GRID_SIZE; c++) {
+                        const cell = board[r][c];
+                        if (cell !== 0) {
+                            const value = cell.value;
+                            const tileData = TILE_MAP[value] || { text: '★', bgColor: '#FFA000', color: '#FFFFFF' };
+                            const tile = document.createElement('div');
+                            
+                            tile.classList.add('tile');
+                            tile.dataset.value = tileData.text;
+                            tile.style.top = `${r * (cellSize + gap) + gap}px`;
+                            tile.style.left = `${c * (cellSize + gap) + gap}px`;
+                            tile.style.width = `${cellSize}px`;
+                            tile.style.height = `${cellSize}px`;
+                            
+                            tile.style.backgroundColor = tileData.bgColor;
+                            tile.style.color = tileData.color;
+                            tile.textContent = tileData.text;
+                            
+                            if (cell.isNew) {
+                                tile.classList.add('tile-new');
+                                delete cell.isNew;
+                            }
+                            if (cell.isMerged) {
+                                tile.classList.add('tile-merged');
+                                delete cell.isMerged;
+                            }
+
+                            boardElement.appendChild(tile);
+                        }
+                    }
+                }
+            }
+            
+            // 在随机空位添加新方块
+            function addRandomTile() {
+                const emptyCells = [];
+                for (let r = 0; r < GRID_SIZE; r++) {
+                    for (let c = 0; c < GRID_SIZE; c++) {
+                        if (board[r][c] === 0) {
+                            emptyCells.push({ r, c });
+                        }
+                    }
+                }
+
+                if (emptyCells.length > 0) {
+                    const { r, c } = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+                    const value = Math.random() < 0.9 ? 2 : 4;
+                    board[r][c] = { value: value, isNew: true };
+                }
+            }
+
+            // 更新分数
+            function updateScore(newPoints) {
+                score += newPoints;
+                scoreElement.textContent = score;
+            }
+
+            // 移动和合并逻辑
+            function move(direction) {
+                if (isGameOver) return;
+
+                const boardBeforeMove = JSON.stringify(board);
+                let tempBoard = JSON.parse(JSON.stringify(board)); // Deep copy
+
+                if (direction === 'up' || direction === 'down') tempBoard = transpose(tempBoard);
+                if (direction === 'right' || direction === 'down') tempBoard = tempBoard.map(row => row.reverse());
+
+                for (let i = 0; i < GRID_SIZE; i++) {
+                    const { newRow, points } = processRow(tempBoard[i]);
+                    updateScore(points);
+                    tempBoard[i] = newRow;
+                }
+
+                if (direction === 'right' || direction === 'down') tempBoard = tempBoard.map(row => row.reverse());
+                if (direction === 'up' || direction === 'down') tempBoard = transpose(tempBoard);
+                
+                board = tempBoard;
+                const boardAfterMove = JSON.stringify(board);
+
+                if (boardBeforeMove !== boardAfterMove) {
+                    addRandomTile();
+                    setTimeout(() => {
+                        drawBoard();
+                        checkGameStatus();
+                    }, 100);
+                }
+            }
+
+            // 处理单行/列的滑动和合并
+            function processRow(row) {
+                let filteredRow = row.filter(cell => cell !== 0);
+                let points = 0;
+
+                for (let i = 0; i < filteredRow.length - 1; i++) {
+                    if (filteredRow[i].value === filteredRow[i+1].value) {
+                        const mergedValue = filteredRow[i].value * 2;
+                        points += mergedValue;
+                        filteredRow[i] = { value: mergedValue, isMerged: true };
+                        filteredRow.splice(i + 1, 1);
+                    }
+                }
+
+                let newRow = Array(GRID_SIZE).fill(0);
+                filteredRow.forEach((cell, i) => newRow[i] = cell);
+                
+                return { newRow, points };
+            }
+
+            // 矩阵转置（行变列，列变行）
+            function transpose(matrix) {
+                return matrix[0].map((_, i) => matrix.map(row => row[i]));
+            }
+
+            // 检查游戏状态
+            function checkGameStatus() {
+                let hasWon = false;
+                let canMove = false;
+
+                for (let r = 0; r < GRID_SIZE; r++) {
+                    for (let c = 0; c < GRID_SIZE; c++) {
+                        const cell = board[r][c];
+                        if (cell === 0) {
+                            canMove = true;
+                        } else {
+                            if (cell.value >= 2048) hasWon = true;
+                            if (c < GRID_SIZE - 1 && board[r][c + 1] && cell.value === board[r][c + 1].value) canMove = true;
+                            if (r < GRID_SIZE - 1 && board[r + 1][c] && cell.value === board[r + 1][c].value) canMove = true;
+                        }
+                    }
+                }
+
+                if (hasWon && !document.body.hasAttribute('data-won')) {
+                    document.body.setAttribute('data-won', 'true');
+                }
+
+                if (!canMove) {
+                    isGameOver = true;
+                    if (hasWon) {
+                        gameOverMessage.textContent = 'You Win! ★';
+                    } else {
+                        gameOverMessage.textContent = 'Game Over!';
+                    }
+                    gameOverOverlay.style.display = 'flex';
+                }
+            }
+
+            // 事件监听
+            document.addEventListener('keydown', e => {
+                switch (e.key) {
+                    case 'ArrowUp': move('up'); break;
+                    case 'ArrowDown': move('down'); break;
+                    case 'ArrowLeft': move('left'); break;
+                    case 'ArrowRight': move('right'); break;
+                }
+            });
+            
+            newGameButton.addEventListener('click', startGame);
+            retryButton.addEventListener('click', startGame);
+
+            // 滑动操作支持
+            let touchStartX = 0, touchStartY = 0;
+            boardElement.addEventListener('touchstart', e => {
+                touchStartX = e.changedTouches[0].screenX;
+                touchStartY = e.changedTouches[0].screenY;
+            }, { passive: true });
+            boardElement.addEventListener('touchend', e => {
+                const touchEndX = e.changedTouches[0].screenX;
+                const touchEndY = e.changedTouches[0].screenY;
+                handleSwipe(touchStartX, touchStartY, touchEndX, touchEndY);
+            });
+
+            function handleSwipe(startX, startY, endX, endY) {
+                const dx = endX - startX;
+                const dy = endY - startY;
+                if (Math.max(Math.abs(dx), Math.abs(dy)) > 30) {
+                    if (Math.abs(dx) > Math.abs(dy)) {
+                        move(dx > 0 ? 'right' : 'left');
+                    } else {
+                        move(dy > 0 ? 'down' : 'up');
+                    }
+                }
+            }
+            
+            window.addEventListener('resize', drawBoard);
+            startGame();
+        });
+    </script>
+</body>
+</html>
